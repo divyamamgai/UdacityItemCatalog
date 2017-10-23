@@ -1,1 +1,2 @@
-# UdacityItemCatalog
+Udacity Project Item Catalog
+=============
