@@ -1,0 +1,30 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - Create Item{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <form action="{{url_for('catalog_items_create')}}" method="post">
+                <h2>Create Item</h2>
+                <input title="Item Title" type="text" name="title" placeholder="Item Title" required>
+                <select name="category_id" title="Item Category" required>
+                    <option value="" selected>Select Item Category</option>
+                    {% for category in categories %}
+                    <option title="{{category.name}}" value="{{category.id}}">{{category.name}}</option>
+                    {% endfor %}
+                </select>
+                <textarea title="Item Description" name="description" placeholder="Item Description"
+                          rows="5"></textarea>
+                <button type="submit" class="button primary margin-left-dot-5" title="Create Item">
+                    <span class="fa fa-plus"></span>
+                    Create Item
+                </button>
+                <a class="button" title="Create Category" href="{{url_for('catalog')}}">
+                    <span class="fa fa-list"></span>
+                    Catalog
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

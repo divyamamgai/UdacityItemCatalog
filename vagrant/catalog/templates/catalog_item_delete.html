@@ -1,0 +1,29 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - Delete Item{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <form action="{{url_for('catalog_item_delete', item_title=item.title)}}" method="post">
+                <h2>Delete Item</h2>
+                <p>
+                    Are you sure you want to delete the item - "{{item.title}}"?
+                </p>
+                <button type="submit" class="button primary margin-left-dot-5" title="Delete Item">
+                    <span class="fa fa-remove"></span>
+                    Delete Item
+                </button>
+                <a class="button" title="Back"
+                   href="{{url_for('catalog_item', category_name=item.category.name, item_title=item.title)}}">
+                    <span class="fa fa-chevron-left"></span>
+                    Back
+                </a>
+                <a class="button" title="Catalog" href="{{url_for('catalog')}}">
+                    <span class="fa fa-list"></span>
+                    Catalog
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

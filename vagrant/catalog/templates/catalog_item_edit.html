@@ -1,0 +1,38 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - Edit Item{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <form action="{{url_for('catalog_item_edit', item_title=item.title)}}" method="post">
+                <h2>Edit Item</h2>
+                <input title="Item Title" type="text" name="title" placeholder="Item Title" value="{{item.title}}"
+                       required>
+                <select name="category_id" title="Item Category" required>
+                    {% for category in categories %}
+                    <option title="{{category.name}}" value="{{category.id}}"
+                            {{ 'selected' if category.id == item.category_id else '' }}>
+                        {{category.name}}
+                    </option>
+                    {% endfor %}
+                </select>
+                <textarea title="Item Description" name="description" placeholder="Item Description"
+                          rows="5">{{item.description}}</textarea>
+                <button type="submit" class="button primary margin-left-dot-5" title="Edit Item">
+                    <span class="fa fa-edit"></span>
+                    Edit Item
+                </button>
+                <a class="button" title="Back"
+                   href="{{url_for('catalog_item', category_name=item.category.name, item_title=item.title)}}">
+                    <span class="fa fa-chevron-left"></span>
+                    Back
+                </a>
+                <a class="button" title="Catalog" href="{{url_for('catalog')}}">
+                    <span class="fa fa-list"></span>
+                    Catalog
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

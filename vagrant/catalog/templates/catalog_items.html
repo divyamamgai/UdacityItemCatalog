@@ -1,0 +1,48 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - {{category.name}}{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-6 col-lg-4 border-right">
+            <h2>
+                Categories
+                <a class="button float-right" title="Add Category" href="{{url_for('catalog_create')}}">
+                    <span class="fa fa-plus"></span>
+                    Category
+                </a>
+            </h2>
+            {% if categories != [] %}
+            {% for category in categories %}
+            <a href="{{url_for('catalog_items', category_name=category.name)}}" class="link">{{category.name}}</a>
+            {% endfor %}
+            {% endif %}
+            {% if categories == [] %}
+            <div class="message">Add categories to get started!</div>
+            {% endif %}
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-6 col-lg-8">
+            <h2>
+                {{category.name}} Items ({{items | length}} items)
+                <a href="{{url_for('catalog_items_create')}}" class="button float-right"
+                   title="Add Item">
+                    <span class="fa fa-plus"></span>
+                    Item
+                </a>
+            </h2>
+            {% if items != [] %}
+            {% for item in items %}
+            <a href="{{url_for('catalog_item', category_name=item.category.name, item_title=item.title)}}"
+               class="link">{{item.title}}</a>
+            {% endfor %}
+            {% endif %}
+            {% if items == [] %}
+            <div class="message">Add items to the {{category.name}} category to see here!</div>
+            {% endif %}
+            <a class="button float-right" title="Create Category" href="{{url_for('catalog')}}">
+                <span class="fa fa-list"></span>
+                Catalog
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

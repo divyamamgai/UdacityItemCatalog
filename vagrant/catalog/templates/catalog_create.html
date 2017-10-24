@@ -1,0 +1,22 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - Create Category{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <form action="{{url_for('catalog_create')}}" method="post">
+                <h2>Create Category</h2>
+                <input title="Category Name" type="text" name="name" placeholder="Category Name">
+                <button type="submit" class="button primary margin-left-dot-5" title="Create Category">
+                    <span class="fa fa-plus"></span>
+                    Create Category
+                </button>
+                <a class="button" title="Create Category" href="{{url_for('catalog')}}">
+                    <span class="fa fa-list"></span>
+                    Catalog
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

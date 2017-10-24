@@ -1,0 +1,36 @@
+{% extends 'main.html' %}
+{% block title %}Catalog - Login{% endblock %}
+{% block additional_scripts %}
+<script src="//apis.google.com/js/platform.js?onload=start"></script>
+<script>
+    window.login_state = '{{login_state}}';
+</script>
+<script src="/static/js/login_google.min.js"></script>
+<script src="/static/js/login_facebook.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <h2>Login</h2>
+            <div class="login-button">
+                <span class="g-signin"
+                      data-scope="openid email"
+                      data-clientid="13140951618-15nik769cellkubaqnjk5facdib2dh4d.apps.googleusercontent.com"
+                      data-redirecturi="postmessage"
+                      data-accesstype="offline"
+                      data-cookiepolicy="single_host_origin"
+                      data-callback="googleLogin"
+                      data-approvalprompt="force">
+                </span>
+            </div>
+            <div class="login-button">
+                <fb:login-button scope="public_profile,email" onlogin="facebookLogin();">
+                    <a href='javascript:facebookLogin()'>Login with Facebook</a>
+                </fb:login-button>
+            </div>
+            <span id="login-loader" class="fa fa-spinner"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
