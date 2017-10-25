@@ -53,14 +53,18 @@
                     </svg>
                     Catalog
                 </h1>
+                {% if 'access_token' not in flask_session %}
                 <a href="{{url_for('login')}}" class="button" title="Login">
                     <span class="fa fa-sign-in"></span>
                     Login
                 </a>
-                <a class="button" title="Logout">
+                {% endif %}
+                {% if 'access_token' in flask_session %}
+                <a href="{{url_for('logout')}}" class="button" title="Logout">
                     <span class="fa fa-sign-out"></span>
                     Logout
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

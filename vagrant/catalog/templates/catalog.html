@@ -6,10 +6,12 @@
         <div class="col-xs-12 col-sm-12 col-md-6 col-lg-4 border-right">
             <h2>
                 Categories
+                {% if 'access_token' in flask_session %}
                 <a class="button float-right" title="Add Category" href="{{url_for('catalog_create')}}">
                     <span class="fa fa-plus"></span>
                     Category
                 </a>
+                {% endif %}
             </h2>
             {% if categories != [] %}
             {% for category in categories %}
@@ -23,10 +25,12 @@
         <div class="col-xs-12 col-sm-12 col-md-6 col-lg-8">
             <h2>
                 Latest Items
+                {% if 'access_token' in flask_session %}
                 <a href="{{url_for('catalog_items_create')}}" class="button float-right" title="Add Item">
                     <span class="fa fa-plus"></span>
                     Item
                 </a>
+                {% endif %}
             </h2>
             {% if latest_items != [] %}
             {% for item in latest_items %}

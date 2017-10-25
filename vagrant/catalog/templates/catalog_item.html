@@ -5,10 +5,16 @@
     <div class="row">
         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
             <h2 title="Item Title">{{item.title}}</h2>
-            <h5 title="Item Category">{{category.name}}</h5>
+            <h3 title="Item Category">{{category.name}}</h3>
+            <h6 title="Item Created By">
+                {{item.user.name}}
+                (<a href="mailto:{{item.user.email}}">{{item.user.email}}</a>)
+            </h6>
             <p class="Item Description">
                 {{item.description}}
             </p>
+            {% if 'access_token' in flask_session %}
+            {% if flask_session.get('user_id') == item.user_id %}
             <a class="button margin-left-0" title="Edit Item"
                href="{{url_for('catalog_item_edit', item_title=item.title)}}">
                 <span class="fa fa-edit"></span>
@@ -18,7 +24,9 @@
                 <span class="fa fa-remove"></span>
                 Delete
             </a>
-            <a class="button float-right" title="Create Category" href="{{url_for('catalog')}}">
+            {% endif %}
+            {% endif %}
+            <a class="button float-right" title="Catalog" href="{{url_for('catalog')}}">
                 <span class="fa fa-list"></span>
                 Catalog
             </a>

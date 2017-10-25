@@ -6,17 +6,36 @@ from sqlalchemy import create_engine
 Base = declarative_base()
 
 
-class Category(Base):
-    __tablename__ = 'category'
+class User(Base):
+    __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), unique=True, nullable=False)
+    name = Column(String(250), nullable=False)
+    email = Column(String(250), unique=True, nullable=False)
 
     @property
     def serialize(self):
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'email': self.email
+        }
+
+
+class Category(Base):
+    __tablename__ = 'category'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship(User)
+
+    @property
+    def serialize(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'user_id': self.user_id
         }
 
 
@@ -27,7 +46,9 @@ class Item(Base):
     title = Column(String(250), unique=True, nullable=False)
     description = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey('category.id'))
+    user_id = Column(Integer, ForeignKey('user.id'))
     category = relationship(Category)
+    user = relationship(User)
 
     @property
     def serialize(self):
@@ -35,7 +56,8 @@ class Item(Base):
             'id': self.id,
             'title': self.title,
             'description': self.description,
-            'category_id': self.category_id
+            'category_id': self.category_id,
+            'user_id': self.user_id
         }
 
 

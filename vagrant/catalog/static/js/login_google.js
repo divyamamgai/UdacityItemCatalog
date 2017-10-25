@@ -5,16 +5,22 @@
 
     function googleLogin(authResult) {
         if (authResult['code']) {
-            $loginButton.hide();
-            $loginLoader.show();
+            $loginButton.css('display', 'none');
+            $loginLoader.css('display', 'inline-block');
             $.ajax({
                 type: 'POST',
                 url: '/login/google/' + login_state,
                 processData: false,
                 data: authResult['code'],
                 contentType: 'application/octet-stream; charset=utf-8',
-                success: function (result) {
-
+                success: function (result, status) {
+                    if (status === 'success') {
+                        w.location.href = '/catalog';
+                    } else {
+                        alert('Error occurred in the login process.\nMessage: ' + result);
+                        $loginButton.css('display', 'block');
+                        $loginLoader.css('display', 'none');
+                    }
                 }
             });
         }
@@ -23,7 +29,7 @@
     w.googleLogin = googleLogin;
 
     $(function () {
-        $loginButton = $('.log-button', d);
+        $loginButton = $('.login-button', d);
         $loginLoader = $('#login-loader', d);
     });
 })(window, document, jQuery);

@@ -5,7 +5,7 @@
 
     w.fbAsyncInit = function () {
         FB.init({
-            appId: '846524132078825',
+            appId: '1680669308673886',
             cookie: true,
             xfbml: true,
             version: 'v2.8'
@@ -24,18 +24,23 @@
     function facebookLogin() {
         var access_token = FB.getAuthResponse()['accessToken'];
         FB.api('/me', function (response) {
-            $loginButton.hide();
-            $loginLoader.show();
+            $loginButton.css('display', 'none');
+            $loginLoader.css('display', 'inline-block');
             $.ajax({
                 type: 'POST',
                 url: '/login/facebook/' + login_state,
                 processData: false,
                 data: access_token,
                 contentType: 'application/octet-stream; charset=utf-8',
-                success: function (result) {
-
+                success: function (result, status) {
+                    if (status === 'success') {
+                        w.location.href = '/catalog';
+                    } else {
+                        alert('Error occurred in the login process.\nMessage: ' + result);
+                        $loginButton.css('display', 'block');
+                        $loginLoader.css('display', 'none');
+                    }
                 }
-
             });
         });
     }
@@ -43,7 +48,7 @@
     w.facebookLogin = facebookLogin;
 
     $(function () {
-        $loginButton = $('.log-button', d);
+        $loginButton = $('.login-button', d);
         $loginLoader = $('#login-loader', d);
     });
 })(window, document, jQuery);

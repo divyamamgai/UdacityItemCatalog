@@ -52,8 +52,12 @@ h5 {
 h6 {
     margin: 1rem 0;
     padding: 0;
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-family: "Roboto Slab", serif;
+}
+
+a {
+    color: #444444;
 }
 
 p {
@@ -229,6 +233,10 @@ header .button {
     background-color: #222222;
 }
 
+.text-center {
+    text-align: center;
+}
+
 .margin-left-0 {
     margin-left: 0;
 }
@@ -284,6 +292,11 @@ footer {
 
 .fa-spinner {
     animation: fa-spinner-animation infinite 2s linear;
+    -webkit-transform-origin: 50% 50%;
+    -moz-transform-origin: 50% 50%;
+    -ms-transform-origin: 50% 50%;
+    -o-transform-origin: 50% 50%;
+    transform-origin: 50% 50%;
 }
 
 @keyframes fa-spinner-animation {
