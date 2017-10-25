@@ -314,6 +314,21 @@ def catalog():
                            flask_session=flask_session)
 
 
+@app.route('/catalog.json')
+def catalog_json():
+    categories = session.query(Category).all()
+    serialized_categories = []
+    # For each serialized category add a property 'items' containing a list of items of that category.
+    for category in categories:
+        serialized_category = category.serialize
+        items = session.query(Item).filter_by(category_id=category.id).all()
+        serialized_category['items'] = [item.serialize for item in items]
+        serialized_categories.append(serialized_category)
+    users = session.query(User).all()
+    serialized_users = [user.serialize for user in users]
+    return jsonify(categories=serialized_categories, users=serialized_users)
+
+
 @app.route('/catalog/create', methods=['GET', 'POST'])
 def catalog_create():
     # Check if the user is logged in or not.
@@ -349,6 +364,18 @@ def catalog_items(category_name):
     else:
         flash('Category "%s" cannot be found!' % category_name)
         return redirect(url_for('catalog'))
+
+
+@app.route('/catalog/<string:category_name>/items.json')
+def catalog_items_json(category_name):
+    category = session.query(Category).filter_by(name=category_name).first()
+    if category:
+        user = session.query(User).filter_by(id=category.user_id).first()
+        items = session.query(Item).filter_by(category_id=category.id).all()
+        serialized_items = [item.serialize for item in items]
+        return jsonify(category_creator=user.serialize, items=serialized_items)
+    else:
+        return jsonify(error='Category not found')
 
 
 @app.route('/catalog/items/create', methods=['GET', 'POST'])
@@ -397,6 +424,20 @@ def catalog_item(category_name, item_title):
     else:
         flash('Category "%s" does not exists!' % category_name)
         return redirect(url_for('catalog'))
+
+
+@app.route('/catalog/<string:category_name>/<string:item_title>.json')
+def catalog_item_json(category_name, item_title):
+    category = session.query(Category).filter_by(name=category_name).first()
+    if category:
+        item = session.query(Item).filter_by(title=item_title, category_id=category.id).first()
+        if item:
+            user = session.query(User).filter_by(id=item.user_id).first()
+            return jsonify(item_creator=user.serialize, item=item.serialize)
+        else:
+            return jsonify(error='Item not found')
+    else:
+        return jsonify(error='Category not found')
 
 
 @app.route('/catalog/<string:item_title>/edit', methods=['GET', 'POST'])
