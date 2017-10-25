@@ -1,20 +1,30 @@
-import random
-import string
 import json
-import httplib2
+import random
 import ssl
-from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, make_response
+import string
+
+import httplib2
+from flask import (Flask,
+                   render_template,
+                   request,
+                   redirect,
+                   jsonify,
+                   url_for,
+                   flash,
+                   make_response)
 from flask import session as flask_session
-from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
+from oauth2client.client import flow_from_clientsecrets
 from sqlalchemy import create_engine
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlalchemy.orm import sessionmaker
+
 from database_setup import Base, User, Category, Item
 
 app = Flask(__name__)
 
-GOOGLE_CLIENT_ID = json.loads(open('google_client_secret.json', 'r').read())['web']['client_id']
+GOOGLE_CLIENT_ID = json.loads(open('google_client_secret.json',
+                                   'r').read()).get('web').get('client_id')
 
 # Connect to Database and create database session
 engine = create_engine('sqlite:///catalog.db')
@@ -24,7 +34,9 @@ session = db_session()
 
 
 def generate_random_token():
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(32))
+    return ''.join(
+        random.choice(string.ascii_uppercase + string.digits) for i in
+        range(32))
 
 
 def get_user_id(email):
@@ -68,18 +80,22 @@ def login():
 @app.route('/login/google/<string:login_state>', methods=['POST'])
 def login_google(login_state):
     if login_state != flask_session.get('login_state'):
-        response = make_response(json.dumps('Invalid login state parameter.'), 401)
+        response = make_response(json.dumps('Invalid login state parameter.'),
+                                 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     auth_code = request.data
 
     try:
-        # Exchange auth code received for access token using the Google App Client secrets.
-        oauth_flow = flow_from_clientsecrets('google_client_secret.json', scope='')
+        # Exchange auth code received for access token using the Google App
+        # Client secrets.
+        oauth_flow = flow_from_clientsecrets('google_client_secret.json',
+                                             scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(auth_code)
     except FlowExchangeError:
-        response = make_response(json.dumps('Failed to upgrade the authorization code.'), 401)
+        response = make_response(
+            json.dumps('Failed to upgrade the authorization code.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -88,44 +104,57 @@ def login_google(login_state):
     try:
         # Request token info to make sure it is in valid state.
         token_info_result = json.loads(
-            h.request('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token,
-                      'GET')[1].decode('utf-8'))
+            h.request(
+                'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token'
+                '=%s' % access_token,
+                'GET')[1].decode('utf-8'))
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting token info from Google Plus.'), 500)
+        response = make_response(json.dumps(
+            'Error occurred while requesting token info from Google Plus.'),
+            500)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     if token_info_result.get('error') is not None:
-        response = make_response(json.dumps(token_info_result.get('error')), 500)
+        response = make_response(json.dumps(token_info_result.get('error')),
+                                 500)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     google_plus_id = credentials.id_token['sub']
 
     if token_info_result.get('user_id') != google_plus_id:
-        response = make_response(json.dumps('Token\'s user ID does not match given user ID.'), 401)
+        response = make_response(
+            json.dumps('Token\'s user ID does not match given user ID.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     if token_info_result.get('issued_to') != GOOGLE_CLIENT_ID:
-        response = make_response(json.dumps('Token\'s client ID does not match app\'s.'), 401)
+        response = make_response(
+            json.dumps('Token\'s client ID does not match app\'s.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     stored_access_token = flask_session.get('access_token')
     stored_google_plus_id = flask_session.get('google_plus_id')
-    if stored_access_token is not None and google_plus_id == stored_google_plus_id:
-        response = make_response(json.dumps('Current user is already connected.'), 200)
+    if stored_access_token is not None \
+            and google_plus_id == stored_google_plus_id:
+        response = make_response(
+            json.dumps('Current user is already connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     try:
         # Request user info using the access token.
         user_info_result = json.loads(
-            h.request('https://www.googleapis.com/oauth2/v1/userinfo?access_token=%s&alt=json' % access_token,
-                      'GET')[1].decode('utf-8'))
+            h.request(
+                'https://www.googleapis.com/oauth2/v1/userinfo?access_token'
+                '=%s&alt=json' % access_token,
+                'GET')[1].decode('utf-8'))
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting user info from Google Plus.'), 500)
+        response = make_response(json.dumps(
+            'Error occurred while requesting user info from Google Plus.'),
+            500)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -138,7 +167,8 @@ def login_google(login_state):
     user_id = get_user_id(flask_session.get('email'))
     # If user does not exists create a new user.
     if not user_id:
-        user_id = create_user(flask_session.get('name'), flask_session.get('email'))
+        user_id = create_user(flask_session.get('name'),
+                              flask_session.get('email'))
         if not user_id:
             # If user creation failed delete already assigned session keys.
             del flask_session['provider']
@@ -146,13 +176,15 @@ def login_google(login_state):
             del flask_session['google_plus_id']
             del flask_session['name']
             del flask_session['email']
-            response = make_response(json.dumps('Error occurred while creating user.'), 500)
+            response = make_response(
+                json.dumps('Error occurred while creating user.'), 500)
             response.headers['Content-Type'] = 'application/json'
             return response
 
     flask_session['user_id'] = user_id
 
-    response = make_response(json.dumps('User "%s" logged in successfully.' % flask_session.get('name')), 200)
+    response = make_response(json.dumps(
+        'User "%s" logged in successfully.' % flask_session.get('name')), 200)
     response.headers['Content-Type'] = 'application/json'
     return response
 
@@ -160,13 +192,15 @@ def login_google(login_state):
 @app.route('/login/facebook/<string:login_state>', methods=['POST'])
 def login_facebook(login_state):
     if login_state != flask_session.get('login_state'):
-        response = make_response(json.dumps('Invalid login state parameter.'), 401)
+        response = make_response(json.dumps('Invalid login state parameter.'),
+                                 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     fb_exchange_token = request.data.decode('utf-8')
 
     # Load Facebook app credentials.
-    facebook_client_secret = json.loads(open('facebook_client_secret.json', 'r').read())
+    facebook_client_secret = json.loads(
+        open('facebook_client_secret.json', 'r').read())
     app_id = facebook_client_secret.get('web').get('app_id')
     app_secret = facebook_client_secret.get('web').get('app_secret')
 
@@ -175,11 +209,16 @@ def login_facebook(login_state):
         # Request access token using the exchange token received.
         # .decode('utf-8') converts the byte result to string.
         access_token_result = json.loads(
-            h.request('https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token'
-                      '&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id, app_secret, fb_exchange_token),
-                      'GET')[1].decode('utf-8'))
+            h.request(
+                'https://graph.facebook.com/oauth/access_token?grant_type'
+                '=fb_exchange_token&client_id=%s&client_secret=%s'
+                '&fb_exchange_token=%s' % (
+                    app_id, app_secret, fb_exchange_token),
+                'GET')[1].decode('utf-8'))
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting access token from Facebook.'), 500)
+        response = make_response(json.dumps(
+            'Error occurred while requesting access token from Facebook.'),
+            500)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -188,10 +227,13 @@ def login_facebook(login_state):
     try:
         # Request user info using the access token received.
         user_info_result = json.loads(
-            h.request('https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % access_token,
-                      'GET')[1].decode('utf-8'))
+            h.request(
+                'https://graph.facebook.com/v2.8/me?access_token=%s&fields'
+                '=name,id,email' % access_token,
+                'GET')[1].decode('utf-8'))
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting user info from Facebook.'), 500)
+        response = make_response(json.dumps(
+            'Error occurred while requesting user info from Facebook.'), 500)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -203,20 +245,23 @@ def login_facebook(login_state):
 
     user_id = get_user_id(flask_session.get('email'))
     if not user_id:
-        user_id = create_user(flask_session.get('name'), flask_session.get('email'))
+        user_id = create_user(flask_session.get('name'),
+                              flask_session.get('email'))
         if not user_id:
             del flask_session['provider']
             del flask_session['access_token']
             del flask_session['facebook_id']
             del flask_session['name']
             del flask_session['email']
-            response = make_response(json.dumps('Error occurred while creating user.'), 500)
+            response = make_response(
+                json.dumps('Error occurred while creating user.'), 500)
             response.headers['Content-Type'] = 'application/json'
             return response
 
     flask_session['user_id'] = user_id
 
-    response = make_response(json.dumps('User "%s" logged in successfully.' % flask_session.get('name')), 200)
+    response = make_response(json.dumps(
+        'User "%s" logged in successfully.' % flask_session.get('name')), 200)
     response.headers['Content-Type'] = 'application/json'
     return response
 
@@ -253,16 +298,21 @@ def logout():
 def logout_google():
     access_token = flask_session.get('access_token')
     if not access_token:
-        response = make_response(json.dumps('User is not connected via Google Plus.'), 401)
+        response = make_response(
+            json.dumps('User is not connected via Google Plus.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     h = httplib2.Http()
     try:
-        revoke_token_result = h.request('https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token,
-                                        'GET')[0].decode('utf-8')
+        revoke_token_result = h.request(
+            'https://accounts.google.com/o/oauth2/revoke?token=%s'
+            % access_token,
+            'GET')[0]
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting to revoke Google Plus token.', 500))
+        response = make_response(json.dumps(
+            'Error occurred while requesting to revoke Google Plus token.',
+            500))
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -270,11 +320,13 @@ def logout_google():
         del flask_session['access_token']
         del flask_session['google_plus_id']
 
-        response = make_response(json.dumps('Successfully disconnected from Google Plus.'), 200)
+        response = make_response(
+            json.dumps('Successfully disconnected from Google Plus.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
-        response = make_response(json.dumps('Failed to revoke Google Plus token.', 400))
+        response = make_response(
+            json.dumps('Failed to revoke Google Plus token.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -283,16 +335,19 @@ def logout_google():
 def logout_facebook():
     access_token = flask_session.get('access_token')
     if not access_token:
-        response = make_response(json.dumps('User is not connected via Facebook.'), 401)
+        response = make_response(
+            json.dumps('User is not connected via Facebook.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     h = httplib2.Http()
     try:
-        revoke_token_result = h.request('https://graph.facebook.com/%s/permissions?access_token=%s' % (
-            flask_session.get('facebook_id'), access_token), 'DELETE')[0]
+        revoke_token_result = h.request(
+            'https://graph.facebook.com/%s/permissions?access_token=%s' % (
+                flask_session.get('facebook_id'), access_token), 'DELETE')[0]
     except ssl.SSLEOFError:
-        response = make_response(json.dumps('Error occurred while requesting to revoke Facebook token.', 500))
+        response = make_response(json.dumps(
+            'Error occurred while requesting to revoke Facebook token.', 500))
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -300,11 +355,13 @@ def logout_facebook():
         del flask_session['access_token']
         del flask_session['facebook_id']
 
-        response = make_response(json.dumps('Successfully disconnected from Facebook.'), 200)
+        response = make_response(
+            json.dumps('Successfully disconnected from Facebook.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
-        response = make_response(json.dumps('Failed to revoke Facebook token.', 400))
+        response = make_response(
+            json.dumps('Failed to revoke Facebook token.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -314,7 +371,8 @@ def logout_facebook():
 def catalog():
     categories = session.query(Category).all()
     latest_items = session.query(Item).order_by(Item.id.desc()).limit(10).all()
-    return render_template('catalog.html', categories=categories, latest_items=latest_items,
+    return render_template('catalog.html', categories=categories,
+                           latest_items=latest_items,
                            flask_session=flask_session)
 
 
@@ -322,7 +380,8 @@ def catalog():
 def catalog_json():
     categories = session.query(Category).all()
     serialized_categories = []
-    # For each serialized category add a property 'items' containing a list of items of that category.
+    # For each serialized category add a property 'items' containing a list
+    # of items of that category.
     for category in categories:
         serialized_category = category.serialize
         items = session.query(Item).filter_by(category_id=category.id).all()
@@ -347,17 +406,20 @@ def catalog_create():
         if request.form['name']:
             category_name = request.form['name']
             # Check if the Category name already exists or not.
-            category = session.query(Category).filter_by(name=category_name).first()
+            category = session.query(Category).filter_by(
+                name=category_name).first()
             if category:
                 flash('Category "%s" already exists!' % category_name)
             else:
-                create_category(name=request.form['name'], user_id=flask_session.get('user_id'))
+                create_category(name=request.form['name'],
+                                user_id=flask_session.get('user_id'))
         else:
             flash('Category Name cannot be empty!')
         return redirect(url_for('catalog'))
     elif request.method == 'GET':
         flask_session['form_token'] = generate_random_token()
-        return render_template('catalog_create.html', flask_session=flask_session)
+        return render_template('catalog_create.html',
+                               flask_session=flask_session)
 
 
 @app.route('/catalog/<string:category_name>/items')
@@ -367,7 +429,8 @@ def catalog_items(category_name):
     if category:
         categories = session.query(Category).all()
         items = session.query(Item).filter_by(category_id=category.id).all()
-        return render_template('catalog_items.html', categories=categories, category=category, items=items,
+        return render_template('catalog_items.html', categories=categories,
+                               category=category, items=items,
                                flask_session=flask_session)
     else:
         flash('Category "%s" cannot be found!' % category_name)
@@ -390,9 +453,11 @@ def catalog_items_json(category_name):
 def catalog_item(category_name, item_title):
     category = session.query(Category).filter_by(name=category_name).first()
     if category:
-        item = session.query(Item).filter_by(title=item_title, category_id=category.id).first()
+        item = session.query(Item).filter_by(title=item_title,
+                                             category_id=category.id).first()
         if item:
-            return render_template('catalog_item.html', category=category, item=item, flask_session=flask_session)
+            return render_template('catalog_item.html', category=category,
+                                   item=item, flask_session=flask_session)
         else:
             flash('Item "%s" cannot be found!' % item_title)
             return redirect(url_for('catalog'))
@@ -405,7 +470,8 @@ def catalog_item(category_name, item_title):
 def catalog_item_json(category_name, item_title):
     category = session.query(Category).filter_by(name=category_name).first()
     if category:
-        item = session.query(Item).filter_by(title=item_title, category_id=category.id).first()
+        item = session.query(Item).filter_by(title=item_title,
+                                             category_id=category.id).first()
         if item:
             user = session.query(User).filter_by(id=item.user_id).first()
             return jsonify(item_creator=user.serialize, item=item.serialize)
@@ -431,7 +497,8 @@ def catalog_items_create():
         if not request.form.get('category_id'):
             flash('Item Category cannot be empty!')
             return redirect(url_for('catalog_items_create'))
-        category = session.query(Category).filter_by(id=request.form['category_id']).first()
+        category = session.query(Category).filter_by(
+            id=request.form['category_id']).first()
         if not category:
             flash('Selected Category does not exists!')
             return redirect(url_for('catalog_items_create'))
@@ -440,8 +507,10 @@ def catalog_items_create():
         if item:
             flash('Item "%s" already exists!' % item_title)
             return redirect(url_for('catalog_items_create'))
-        item = Item(title=request.form.get('title'), description=request.form.get('description'),
-                    category_id=category.id, user_id=flask_session.get('user_id'))
+        item = Item(title=request.form.get('title'),
+                    description=request.form.get('description'),
+                    category_id=category.id,
+                    user_id=flask_session.get('user_id'))
         session.add(item)
         session.commit()
         flash('Item "%s" successfully created!' % item.title)
@@ -449,7 +518,9 @@ def catalog_items_create():
     elif request.method == 'GET':
         categories = session.query(Category).all()
         flask_session['form_token'] = generate_random_token()
-        return render_template('catalog_items_create.html', categories=categories, flask_session=flask_session)
+        return render_template('catalog_items_create.html',
+                               categories=categories,
+                               flask_session=flask_session)
 
 
 @app.route('/catalog/<string:item_title>/edit', methods=['GET', 'POST'])
@@ -464,30 +535,37 @@ def catalog_item_edit(item_title):
             flash('You cannot edit the item since it was not created by you!')
             return redirect(url_for('catalog'))
         if request.method == 'POST':
-            if flask_session.get('form_token') != request.form.get('form_token'):
+            if flask_session.get('form_token') != request.form.get(
+                    'form_token'):
                 flash('Form token miss match!')
                 return redirect(url_for('catalog'))
             if not request.form.get('title'):
                 flash('Item Title cannot be empty!')
-                return redirect(url_for('catalog_item_edit', item_title=item_title))
+                return redirect(
+                    url_for('catalog_item_edit', item_title=item_title))
             new_item_title = request.form.get('title')
             # If the item title has changed, validate that it is unique.
             if item_title != new_item_title:
-                existing_item = session.query(Item).filter_by(title=new_item_title).first()
+                existing_item = session.query(Item).filter_by(
+                    title=new_item_title).first()
                 if existing_item:
                     flash('Item "%s" already exists!' % new_item_title)
-                    return redirect(url_for('catalog_item_edit', item_title=item_title))
+                    return redirect(
+                        url_for('catalog_item_edit', item_title=item_title))
             item.title = new_item_title
             item.category_id = request.form.get('category_id')
             item.description = request.form.get('description')
             session.add(item)
             session.commit()
             flash('Item successfully edited!')
-            return redirect(url_for('catalog_item', category_name=item.category.name, item_title=item.title))
+            return redirect(
+                url_for('catalog_item', category_name=item.category.name,
+                        item_title=item.title))
         elif request.method == 'GET':
             categories = session.query(Category).all()
             flask_session['form_token'] = generate_random_token()
-            return render_template('catalog_item_edit.html', categories=categories, item=item,
+            return render_template('catalog_item_edit.html',
+                                   categories=categories, item=item,
                                    flask_session=flask_session)
     else:
         flash('Item "%s" cannot be found!' % item_title)
@@ -502,10 +580,12 @@ def catalog_item_delete(item_title):
     item = session.query(Item).filter_by(title=item_title).first()
     if item:
         if item.user_id != flask_session.get('user_id'):
-            flash('You cannot delete the item since it was not created by you!')
+            flash('You cannot delete the item since it was not '
+                  'created by you!')
             return redirect(url_for('catalog'))
         if request.method == 'POST':
-            if flask_session.get('form_token') != request.form.get('form_token'):
+            if flask_session.get('form_token') != request.form.get(
+                    'form_token'):
                 flash('Form token miss match!')
                 return redirect(url_for('catalog'))
             session.delete(item)
@@ -514,7 +594,8 @@ def catalog_item_delete(item_title):
             return redirect(url_for('catalog'))
         elif request.method == 'GET':
             flask_session['form_token'] = generate_random_token()
-            return render_template('catalog_item_delete.html', item=item, flask_session=flask_session)
+            return render_template('catalog_item_delete.html', item=item,
+                                   flask_session=flask_session)
     else:
         flash('Item "%s" cannot be found!' % item_title)
         return redirect(url_for('catalog'))
@@ -523,4 +604,4 @@ def catalog_item_delete(item_title):
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
     app.debug = True
-    app.run(host='localhost', port=5000)
+    app.run(host='0.0.0.0', port=5000)
