@@ -3,6 +3,7 @@
         $loginLoader,
         login_state = w.login_state;
 
+    // Initialize Facebook SDK
     w.fbAsyncInit = function () {
         FB.init({
             appId: '1680669308673886',
@@ -12,6 +13,7 @@
         });
     };
 
+    // Load Facebook SDK
     (function (d, s, id) {
         var js, fjs = d.getElementsByTagName(s)[0];
         if (d.getElementById(id)) return;
@@ -23,9 +25,11 @@
 
     function facebookLogin() {
         var access_token = FB.getAuthResponse()['accessToken'];
+        // Verify facebook login using the received access token.
         FB.api('/me', function (response) {
             $loginButton.css('display', 'none');
             $loginLoader.css('display', 'inline-block');
+            // Perform Facebook Login on our server side.
             $.ajax({
                 type: 'POST',
                 url: '/login/facebook/' + login_state,
@@ -45,6 +49,7 @@
         });
     }
 
+    // Expose facebookLogin function to global scope.
     w.facebookLogin = facebookLogin;
 
     $(function () {

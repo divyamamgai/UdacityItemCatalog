@@ -4,9 +4,11 @@
         login_state = w.login_state;
 
     function googleLogin(authResult) {
+        // Check if Google Plus login was successful.
         if (authResult['code']) {
             $loginButton.css('display', 'none');
             $loginLoader.css('display', 'inline-block');
+            // Perform Google Plus Login on our server side.
             $.ajax({
                 type: 'POST',
                 url: '/login/google/' + login_state,
@@ -26,6 +28,7 @@
         }
     }
 
+    // Expose googleLogin function to global scope.
     w.googleLogin = googleLogin;
 
     $(function () {

@@ -15,6 +15,7 @@ class User(Base):
 
     @property
     def serialize(self):
+        """Returns serialized form of the User object."""
         return {
             'id': self.id,
             'name': self.name,
@@ -27,11 +28,13 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), unique=True, nullable=False)
+    # Stores the ID of the user who created this Category.
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship(User)
 
     @property
     def serialize(self):
+        """Returns serialized form of the Category object."""
         return {
             'id': self.id,
             'name': self.name,
@@ -46,12 +49,14 @@ class Item(Base):
     title = Column(String(250), unique=True, nullable=False)
     description = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey('category.id'))
+    # Stores the ID of the user who created this Item.
     user_id = Column(Integer, ForeignKey('user.id'))
     category = relationship(Category)
     user = relationship(User)
 
     @property
     def serialize(self):
+        """Returns serialized form of the Item object."""
         return {
             'id': self.id,
             'title': self.title,

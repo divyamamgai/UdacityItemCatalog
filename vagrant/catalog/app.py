@@ -24,6 +24,7 @@ session = db_session()
 
 
 def get_user_id(email):
+    """Get User ID using User Email"""
     user = session.query(User).filter_by(email=email).first()
     if user:
         return user.id
@@ -32,6 +33,7 @@ def get_user_id(email):
 
 
 def create_user(name, email):
+    """Create a new User using the details provided"""
     try:
         user = User(name=name, email=email)
         session.add(user)
@@ -42,6 +44,7 @@ def create_user(name, email):
 
 
 def create_category(name, user_id):
+    """Create a new Category using the details provided"""
     category = Category(name=name, user_id=user_id)
     session.add(category)
     session.commit()
@@ -67,6 +70,7 @@ def login_google(login_state):
     auth_code = request.data
 
     try:
+        # Exchange auth code received for access token using the Google App Client secrets.
         oauth_flow = flow_from_clientsecrets('google_client_secret.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(auth_code)
@@ -78,6 +82,7 @@ def login_google(login_state):
     access_token = credentials.access_token
     h = httplib2.Http()
     try:
+        # Request token info to make sure it is in valid state.
         token_info_result = json.loads(
             h.request('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token,
                       'GET')[1].decode('utf-8'))
@@ -111,6 +116,7 @@ def login_google(login_state):
         return response
 
     try:
+        # Request user info using the access token.
         user_info_result = json.loads(
             h.request('https://www.googleapis.com/oauth2/v1/userinfo?access_token=%s&alt=json' % access_token,
                       'GET')[1].decode('utf-8'))
@@ -126,9 +132,11 @@ def login_google(login_state):
     flask_session['email'] = user_info_result.get('email')
 
     user_id = get_user_id(flask_session.get('email'))
+    # If user does not exists create a new user.
     if not user_id:
         user_id = create_user(flask_session.get('name'), flask_session.get('email'))
         if not user_id:
+            # If user creation failed delete already assigned session keys.
             del flask_session['provider']
             del flask_session['access_token']
             del flask_session['google_plus_id']
@@ -153,11 +161,15 @@ def login_facebook(login_state):
         return response
     fb_exchange_token = request.data.decode('utf-8')
 
+    # Load Facebook app credentials.
     facebook_client_secret = json.loads(open('facebook_client_secret.json', 'r').read())
     app_id = facebook_client_secret.get('web').get('app_id')
     app_secret = facebook_client_secret.get('web').get('app_secret')
+
     h = httplib2.Http()
     try:
+        # Request access token using the exchange token received.
+        # .decode('utf-8') converts the byte result to string.
         access_token_result = json.loads(
             h.request('https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token'
                       '&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id, app_secret, fb_exchange_token),
@@ -170,6 +182,7 @@ def login_facebook(login_state):
     access_token = access_token_result.get('access_token')
 
     try:
+        # Request user info using the access token received.
         user_info_result = json.loads(
             h.request('https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % access_token,
                       'GET')[1].decode('utf-8'))
@@ -218,6 +231,7 @@ def logout():
                 flash('Error occurred while trying to logout via Facebook.')
                 return redirect(url_for('catalog'))
 
+        # On successful logout delete session keys.
         del flask_session['name']
         del flask_session['email']
         del flask_session['user_id']
@@ -302,12 +316,15 @@ def catalog():
 
 @app.route('/catalog/create', methods=['GET', 'POST'])
 def catalog_create():
+    # Check if the user is logged in or not.
     if 'access_token' not in flask_session:
         flash('You need to be logged in to create categories!')
         return redirect(url_for('catalog'))
     if request.method == 'POST':
+        # Check if name is not empty.
         if request.form['name']:
             category_name = request.form['name']
+            # Check if the Category name already exists or not.
             category = session.query(Category).filter_by(name=category_name).first()
             if category:
                 flash('Category "%s" already exists!' % category_name)
@@ -323,6 +340,7 @@ def catalog_create():
 @app.route('/catalog/<string:category_name>/items')
 def catalog_items(category_name):
     category = session.query(Category).filter_by(name=category_name).first()
+    # Check if Category exists or not.
     if category:
         categories = session.query(Category).all()
         items = session.query(Item).filter_by(category_id=category.id).all()
@@ -339,6 +357,7 @@ def catalog_items_create():
         flash('You need to be logged in to create items!')
         return redirect(url_for('catalog'))
     if request.method == 'POST':
+        # Validate the required fields for item.
         if not request.form['title']:
             flash('Item Title cannot be empty!')
             return redirect(url_for('catalog_items_create'))
@@ -387,6 +406,7 @@ def catalog_item_edit(item_title):
         return redirect(url_for('catalog'))
     item = session.query(Item).filter_by(title=item_title).first()
     if item:
+        # Check if the logged in user is same as the creator.
         if item.user_id != flask_session.get('user_id'):
             flash('You cannot edit the item since it was not created by you!')
             return redirect(url_for('catalog'))
@@ -395,6 +415,7 @@ def catalog_item_edit(item_title):
                 flash('Item Title cannot be empty!')
                 return redirect(url_for('catalog_item_edit', item_title=item_title))
             new_item_title = request.form.get('title')
+            # If the item title has changed, validate that it is unique.
             if item_title != new_item_title:
                 existing_item = session.query(Item).filter_by(title=new_item_title).first()
                 if existing_item:
