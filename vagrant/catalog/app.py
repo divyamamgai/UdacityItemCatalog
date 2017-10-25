@@ -23,6 +23,10 @@ db_session = sessionmaker(bind=engine)
 session = db_session()
 
 
+def generate_random_token():
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(32))
+
+
 def get_user_id(email):
     """Get User ID using User Email"""
     user = session.query(User).filter_by(email=email).first()
@@ -54,7 +58,7 @@ def create_category(name, user_id):
 @app.route('/login')
 def login():
     if 'access_token' not in flask_session:
-        login_state = ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(32))
+        login_state = generate_random_token()
         flask_session['login_state'] = login_state
         return render_template('login.html', login_state=login_state)
     else:
@@ -336,6 +340,9 @@ def catalog_create():
         flash('You need to be logged in to create categories!')
         return redirect(url_for('catalog'))
     if request.method == 'POST':
+        if flask_session.get('form_token') != request.form.get('form_token'):
+            flash('Form token miss match!')
+            return redirect(url_for('catalog'))
         # Check if name is not empty.
         if request.form['name']:
             category_name = request.form['name']
@@ -349,6 +356,7 @@ def catalog_create():
             flash('Category Name cannot be empty!')
         return redirect(url_for('catalog'))
     elif request.method == 'GET':
+        flask_session['form_token'] = generate_random_token()
         return render_template('catalog_create.html', flask_session=flask_session)
 
 
@@ -376,39 +384,6 @@ def catalog_items_json(category_name):
         return jsonify(category_creator=user.serialize, items=serialized_items)
     else:
         return jsonify(error='Category not found')
-
-
-@app.route('/catalog/items/create', methods=['GET', 'POST'])
-def catalog_items_create():
-    if 'access_token' not in flask_session:
-        flash('You need to be logged in to create items!')
-        return redirect(url_for('catalog'))
-    if request.method == 'POST':
-        # Validate the required fields for item.
-        if not request.form['title']:
-            flash('Item Title cannot be empty!')
-            return redirect(url_for('catalog_items_create'))
-        if not request.form['category_id']:
-            flash('Item Category cannot be empty!')
-            return redirect(url_for('catalog_items_create'))
-        category = session.query(Category).filter_by(id=request.form['category_id']).first()
-        if not category:
-            flash('Selected Category does not exists!')
-            return redirect(url_for('catalog_items_create'))
-        item_title = request.form.get('title')
-        item = session.query(Item).filter_by(title=item_title).first()
-        if item:
-            flash('Item "%s" already exists!' % item_title)
-            return redirect(url_for('catalog_items_create'))
-        item = Item(title=request.form.get('title'), description=request.form.get('description'),
-                    category_id=category.id, user_id=flask_session.get('user_id'))
-        session.add(item)
-        session.commit()
-        flash('Item "%s" successfully created!' % item.title)
-        return redirect(url_for('catalog'))
-    elif request.method == 'GET':
-        categories = session.query(Category).all()
-        return render_template('catalog_items_create.html', categories=categories, flask_session=flask_session)
 
 
 @app.route('/catalog/<string:category_name>/<string:item_title>')
@@ -440,6 +415,43 @@ def catalog_item_json(category_name, item_title):
         return jsonify(error='Category not found')
 
 
+@app.route('/catalog/items/create', methods=['GET', 'POST'])
+def catalog_items_create():
+    if 'access_token' not in flask_session:
+        flash('You need to be logged in to create items!')
+        return redirect(url_for('catalog'))
+    if request.method == 'POST':
+        if flask_session.get('form_token') != request.form.get('form_token'):
+            flash('Form token miss match!')
+            return redirect(url_for('catalog'))
+        # Validate the required fields for item.
+        if not request.form.get('title'):
+            flash('Item Title cannot be empty!')
+            return redirect(url_for('catalog_items_create'))
+        if not request.form.get('category_id'):
+            flash('Item Category cannot be empty!')
+            return redirect(url_for('catalog_items_create'))
+        category = session.query(Category).filter_by(id=request.form['category_id']).first()
+        if not category:
+            flash('Selected Category does not exists!')
+            return redirect(url_for('catalog_items_create'))
+        item_title = request.form.get('title')
+        item = session.query(Item).filter_by(title=item_title).first()
+        if item:
+            flash('Item "%s" already exists!' % item_title)
+            return redirect(url_for('catalog_items_create'))
+        item = Item(title=request.form.get('title'), description=request.form.get('description'),
+                    category_id=category.id, user_id=flask_session.get('user_id'))
+        session.add(item)
+        session.commit()
+        flash('Item "%s" successfully created!' % item.title)
+        return redirect(url_for('catalog'))
+    elif request.method == 'GET':
+        categories = session.query(Category).all()
+        flask_session['form_token'] = generate_random_token()
+        return render_template('catalog_items_create.html', categories=categories, flask_session=flask_session)
+
+
 @app.route('/catalog/<string:item_title>/edit', methods=['GET', 'POST'])
 def catalog_item_edit(item_title):
     if 'access_token' not in flask_session:
@@ -452,7 +464,10 @@ def catalog_item_edit(item_title):
             flash('You cannot edit the item since it was not created by you!')
             return redirect(url_for('catalog'))
         if request.method == 'POST':
-            if not request.form['title']:
+            if flask_session.get('form_token') != request.form.get('form_token'):
+                flash('Form token miss match!')
+                return redirect(url_for('catalog'))
+            if not request.form.get('title'):
                 flash('Item Title cannot be empty!')
                 return redirect(url_for('catalog_item_edit', item_title=item_title))
             new_item_title = request.form.get('title')
@@ -471,6 +486,7 @@ def catalog_item_edit(item_title):
             return redirect(url_for('catalog_item', category_name=item.category.name, item_title=item.title))
         elif request.method == 'GET':
             categories = session.query(Category).all()
+            flask_session['form_token'] = generate_random_token()
             return render_template('catalog_item_edit.html', categories=categories, item=item,
                                    flask_session=flask_session)
     else:
@@ -489,11 +505,15 @@ def catalog_item_delete(item_title):
             flash('You cannot delete the item since it was not created by you!')
             return redirect(url_for('catalog'))
         if request.method == 'POST':
+            if flask_session.get('form_token') != request.form.get('form_token'):
+                flash('Form token miss match!')
+                return redirect(url_for('catalog'))
             session.delete(item)
             session.commit()
             flash('Item "%s" successfully deleted!' % item_title)
             return redirect(url_for('catalog'))
         elif request.method == 'GET':
+            flask_session['form_token'] = generate_random_token()
             return render_template('catalog_item_delete.html', item=item, flask_session=flask_session)
     else:
         flash('Item "%s" cannot be found!' % item_title)
@@ -503,4 +523,4 @@ def catalog_item_delete(item_title):
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
     app.debug = True
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='localhost', port=5000)

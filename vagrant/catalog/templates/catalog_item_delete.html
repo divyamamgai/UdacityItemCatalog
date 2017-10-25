@@ -9,6 +9,7 @@
                 <p>
                     Are you sure you want to delete the item - "{{item.title}}"?
                 </p>
+                <input type="hidden" name="form_token" value="{{flask_session.get('form_token')}}">
                 <button type="submit" class="button primary margin-left-dot-5" title="Delete Item">
                     <span class="fa fa-remove"></span>
                     Delete Item
